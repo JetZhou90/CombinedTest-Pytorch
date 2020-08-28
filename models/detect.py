@@ -1,4 +1,3 @@
-
 import torch , cv2
 from torch import nn
 import numpy as np
@@ -33,9 +32,7 @@ class EfficientDetBackbone(nn.Module):
             7: [72, 200, 576],
             8: [80, 224, 640],
         }
-
         num_anchors = len(self.aspect_ratios) * self.num_scales
-
         self.bifpn = nn.Sequential(
             *[BiFPN(self.fpn_num_filters[self.compound_coef],
                     conv_channel_coef[compound_coef],
@@ -43,7 +40,6 @@ class EfficientDetBackbone(nn.Module):
                     attention=True if compound_coef < 6 else False,
                     use_p8=compound_coef > 7)
               for _ in range(self.fpn_cell_repeats[compound_coef])])
-
         self.num_classes = num_classes
         self.regressor = Regressor(in_channels=self.fpn_num_filters[self.compound_coef], num_anchors=num_anchors,
                                    num_layers=self.box_class_repeats[self.compound_coef],
@@ -52,11 +48,9 @@ class EfficientDetBackbone(nn.Module):
                                      num_classes=num_classes,
                                      num_layers=self.box_class_repeats[self.compound_coef],
                                      pyramid_levels=self.pyramid_levels[self.compound_coef])
-
         self.anchors = Anchors(anchor_scale=self.anchor_scale[compound_coef],
                                pyramid_levels=(torch.arange(self.pyramid_levels[self.compound_coef]) + 3).tolist(),
                                **kwargs)
-
         self.backbone_net = EfficientNet(self.backbone_compound_coef[compound_coef], load_weights)
 
     def freeze_bn(self):
@@ -66,16 +60,12 @@ class EfficientDetBackbone(nn.Module):
 
     def forward(self, inputs):
         max_size = inputs.shape[-1]
-
         _, p3, p4, p5 = self.backbone_net(inputs)
-
         features = (p3, p4, p5)
         features = self.bifpn(features)
-
         regression = self.regressor(features)
         classification = self.classifier(features)
         anchors = self.anchors(inputs, inputs.dtype)
-
         return features, regression, classification, anchors
 
     def init_backbone(self, path):
@@ -95,18 +85,15 @@ class EfficientDetBackbone(nn.Module):
     def detect_image(self, image_path, use_cuda=False, use_float16=False):
         # replace this part with your project's anchor config
         max_size = self.input_sizes[self.compound_coef]
-        
         anchor_ratios = [(1.0, 1.0), (1.4, 0.7), (0.7, 1.4)]
         anchor_scales = [2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0)]
         threshold = 0.2
         iou_threshold = 0.2
         ori_imgs, framed_imgs, framed_metas = preprocess(image_path, max_size=max_size)
-
         if use_cuda:
             x = torch.stack([torch.from_numpy(fi).cuda() for fi in framed_imgs], 0)
         else:
             x = torch.stack([torch.from_numpy(fi) for fi in framed_imgs], 0)
-
         x = x.to(torch.float32 if not use_float16 else torch.float16).permute(0, 3, 1, 2)
         features, regression, classification, anchors = self.forward(x)
         regressBoxes = BBoxTransform()

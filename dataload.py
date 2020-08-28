@@ -27,7 +27,6 @@ class Resizer(object):
         new_image = np.zeros((self.img_size, self.img_size, 3))
         new_image[0:resized_height, 0:resized_width] = image
         annots[:, :4] *= scale
-
         return {'img': torch.from_numpy(new_image).to(torch.float32), 'annot': torch.from_numpy(annots), 'scale': scale}
 
 class Augmenter(object):
@@ -44,30 +43,8 @@ class Augmenter(object):
             annots[:, 0] = cols - x2
             annots[:, 2] = cols - x_tmp
             sample = {'img': image, 'annot': annots}
-
         return sample
         
-def collater(data):
-    imgs = [s['img'] for s in data]
-    annots = [s['annot'] for s in data]
-    scales = [s['scale'] for s in data]
-
-    imgs = torch.from_numpy(np.stack(imgs, axis=0))
-
-    max_num_annots = max(annot.shape[0] for annot in annots)
-
-    if max_num_annots > 0:
-
-        annot_padded = torch.ones((len(annots), max_num_annots, 5)) * -1
-
-        for idx, annot in enumerate(annots):
-            if annot.shape[0] > 0:
-                annot_padded[idx, :annot.shape[0], :] = annot
-    else:
-        annot_padded = torch.ones((len(annots), 1, 5)) * -1
-
-    imgs = imgs.permute(0, 3, 1, 2)
-    return {'img': imgs, 'annot': annot_padded, 'scale': scales}
 
 class Normalizer(object):
 
@@ -234,4 +211,18 @@ class VAE_Dataset_folder(Dataset):
         return img, la_img
 
 
-        
+def collater(data):
+    imgs = [s['img'] for s in data]
+    annots = [s['annot'] for s in data]
+    scales = [s['scale'] for s in data]
+    imgs = torch.from_numpy(np.stack(imgs, axis=0))
+    max_num_annots = max(annot.shape[0] for annot in annots)
+    if max_num_annots > 0:
+        annot_padded = torch.ones((len(annots), max_num_annots, 5)) * -1
+        for idx, annot in enumerate(annots):
+            if annot.shape[0] > 0:
+                annot_padded[idx, :annot.shape[0], :] = annot
+    else:
+        annot_padded = torch.ones((len(annots), 1, 5)) * -1
+    imgs = imgs.permute(0, 3, 1, 2)
+    return {'img': imgs, 'annot': annot_padded, 'scale': scales}

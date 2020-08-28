@@ -1,0 +1,1 @@
+{"name": "EfficientNet", "version": 0, "tags_path": "logs/EfficientNet\\version_0/meta_tags.csv", "metrics_path": "logs/EfficientNet\\version_0/metrics.csv", "autosave": false, "description": null, "created_at": "2020-08-28 09:16:55.692991", "exp_hash": "EfficientNet_v0"}
