@@ -3,7 +3,7 @@ import argparse
 import numpy as np
 import torch
 from models import *
-from experiment import VAEXperiment, EfficientExperiment
+from experiment import VAEXperiment, EfficientExperiment, UnetExperiment
 import torch.backends.cudnn as cudnn
 from pytorch_lightning import Trainer
 from pytorch_lightning.logging import TestTubeLogger
@@ -17,7 +17,7 @@ if __name__ == "__main__":
                         dest="filename",
                         metavar='FILE',
                         help =  'path to the config file',
-                        default='configs/detect.yaml')
+                        default='configs/unet.yaml')
 
     args = parser.parse_args()
     with open(args.filename, 'r') as file:
@@ -40,11 +40,16 @@ if __name__ == "__main__":
     cudnn.deterministic = True
     cudnn.benchmark = False
 
-    model = DetectModel(num_classes=config['model_params']['num_classes'], 
-    compound_coef=config['model_params']['compound_coef'], obj_list=config['model_params']['obj_list'],
-    ratios=eval(config['model_params']['anchors_ratios']), scales=eval(config['model_params']['anchors_scales']))
-    experiment = EfficientExperiment(model,
-                            config['exp_params'])
+    # model = DetectModel(num_classes=config['model_params']['num_classes'], 
+    # compound_coef=config['model_params']['compound_coef'], obj_list=config['model_params']['obj_list'],
+    # ratios=eval(config['model_params']['anchors_ratios']), scales=eval(config['model_params']['anchors_scales']))
+    # experiment = EfficientExperiment(model,
+    #                         config['exp_params'])    
+
+    model = NestedUNet()
+    experiment = UnetExperiment(model, config['exp_params'])
+
+
 
     runner = Trainer(default_save_path=f"{tt_logger.save_dir}",
                     min_nb_epochs=1,

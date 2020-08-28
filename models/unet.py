@@ -525,7 +525,7 @@ class NestedUNet(nn.Module):
         return output
 
     def loss_function(self, y_pre, y, **kwargs) -> dict:
-        lossT = calc_loss(y_pred, y) 
+        lossT = calc_loss(y_pre, y) 
         return {'loss':lossT} 
 
 #Dictioary Unet

@@ -1,4 +1,5 @@
-import math
+import math,cv2
+import numpy as np
 import torch
 from torch import optim
 from models import BaseVAE, DetectModel, BaseUnet
@@ -11,9 +12,13 @@ from torch.utils.data import DataLoader
 from dataload import *
 from efficientdet.utils import BBoxTransform, ClipBoxes
 from utils.utils import preprocess, invert_affine, postprocess, STANDARD_COLORS, standard_to_bgr, get_index_label, plot_one_box
-
+from PIL import Image
+import matplotlib.pyplot as plt
+from torch.nn import functional as F
+from losses import threshold_predictions_p
 
 img_path = 'test/wps002.png'
+seg_img_path = 'test/american_bulldog_56.jpg'
 
 class EfficientExperiment(pl.LightningModule):
 
@@ -269,7 +274,7 @@ class VAEXperiment(pl.LightningModule):
             transforms.ToTensor(),
             # torchvision.transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
         ])
-        #raise ValueError('Undefined dataset type')
+
         return transform
 
 class UnetExperiment(pl.LightningModule):
@@ -292,7 +297,7 @@ class UnetExperiment(pl.LightningModule):
         return self.model(input)
     
     def training_step(self, batch, batch_idx, optimizer_idx = 0):
-        real_img, label = bath
+        real_img, label = batch
         self.curr_device = real_img.device
         mask = self.forward(real_img)
         train_loss = self.model.loss_function(mask, label)
@@ -300,7 +305,7 @@ class UnetExperiment(pl.LightningModule):
         return train_loss
 
     def validation_step(self, batch, batch_idx, optimizer_idx = 0):
-        real_img, label = bath
+        real_img, label = batch
         self.curr_device = real_img.device
         mask = self.forward(real_img)
         val_loss = self.model.loss_function(mask, label)
@@ -311,6 +316,7 @@ class UnetExperiment(pl.LightningModule):
         avg_loss = torch.stack([x['loss'] for x in outputs]).mean()
         tensorboard_logs = {'avg_val_loss': avg_loss}
         # self.model.detect_image(img_path)
+        self.segment_image(seg_img_path)
         return {'val_loss': avg_loss, 'log': tensorboard_logs}
 
  
@@ -347,13 +353,38 @@ class UnetExperiment(pl.LightningModule):
                 return optims, scheds
         except:
             return optims
+        
+    def segment_image(self, image_path):
+        data_transform = transforms.Compose([
+               transforms.Resize((self.params['imH'],self.params['imW'])),
+               transforms.ToTensor(),
+               transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+            ])
+        image = Image.open(image_path)
+        input_tensor = data_transform(image)
+        pred_tb = self.model(input_tensor.unsqueeze(0).to(self.curr_device))
+        pred_tb = F.sigmoid(pred_tb)
+        pred_tb = pred_tb.detach().numpy()
+        mask = pred_tb[0].transpose(1,2,0)
+        mask = threshold_predictions_p(mask, thr=0.00392157)
+        mask[mask==1]=-1
+        mask[mask==0]=1
+        mask[mask==-1]=0
+        image = image.resize((self.params['imH'],self.params['imW']),Image.ANTIALIAS)
+        image = np.asarray(image)
+        masked_img = image * mask
+        plt.imsave(f"{self.logger.save_dir}{self.logger.name}/version_{self.logger.version}/"
+                          f"masked_{self.logger.name}_{self.current_epoch}.png", masked_img)
 
 
 
-   @data_loader
+
+
+
+    @data_loader
     def train_dataloader(self):
-        transform = self.data_transforms()
-        dataset = VAE_Dataset_folder(self.params['train_data_path'], self.params['train_data_path'])
+       
+        dataset = VAE_Dataset_folder(self.params['train_data_path'], self.params['train_ann_path'])
             # raise ValueError('Undefined dataset type')
         self.num_train_imgs = len(dataset)
         return DataLoader(dataset,
@@ -363,8 +394,8 @@ class UnetExperiment(pl.LightningModule):
 
     @data_loader
     def val_dataloader(self):
-        transform = self.data_transforms()
-        self.sample_dataloader = VAE_Dataset_folder(self.params['train_data_path'], self.params['train_data_path'])
+        
+        self.sample_dataloader = VAE_Dataset_folder(self.params['test_data_path'], self.params['test_ann_path'])
         self.num_val_imgs = len(self.sample_dataloader)
         self.sample_dataloader = DataLoader(self.sample_dataloader, batch_size= self.params['batch_size'],
                                             shuffle = False, num_workers=self.params['num_workers'],

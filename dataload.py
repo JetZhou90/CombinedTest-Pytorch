@@ -155,7 +155,7 @@ class VAE_Dataset_folder(Dataset):
             self.labels_dir = labels_dir
         else:
             self.labels_dir = images_dir
-        self.labels_dir = sorted(os.listdir(self.labels_dir))
+        self.labels = sorted(os.listdir(self.labels_dir))
         self.transformI = transformI
         self.imH = imH
         self.imW = imW
