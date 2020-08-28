@@ -8,7 +8,7 @@ from .unet import Unet_dict, NestedUNet, U_Net, R2U_Net, AttU_Net, R2AttU_Net
 DetectModel = EfficientDetBackbone
 BaseUnet = U_Net
 
-model_Inputs = {
+unet_models = {
     "U_Net" : U_Net,
     "NestedUNet":NestedUNet
     }

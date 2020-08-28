@@ -1,11 +1,8 @@
 model_params:
   name: 'NestedUNet'
 
-
-
-
 exp_params:
-  dataset: diy
+  dataset: Pet
   train_data_path: 'data/unet/train/images/'
   train_ann_path:  'data/unet/train/annotations/'
   test_data_path: 'data/unet/test/images/'

@@ -9,7 +9,7 @@ import pytorch_lightning as pl
 from torchvision import transforms
 import torchvision.utils as vutils
 from torch.utils.data import DataLoader
-from dataload import *
+from dataload import Detect_Dataset_folder, Unet_Dataset_folder, VAE_Dataset_folder
 from efficientdet.utils import BBoxTransform, ClipBoxes
 from utils.utils import preprocess, invert_affine, postprocess, STANDARD_COLORS, standard_to_bgr, get_index_label, plot_one_box
 from PIL import Image
@@ -20,13 +20,13 @@ from losses import threshold_predictions_p
 img_path = 'test/wps002.png'
 seg_img_path = 'test/american_bulldog_56.jpg'
 
+
 class EfficientExperiment(pl.LightningModule):
 
     def __init__(self, 
                 detect_model: DetectModel,
                 params: dict) -> None:
         super(EfficientExperiment, self).__init__()
-
         self.model = detect_model
         self.params = params
         self.curr_device = None
@@ -61,9 +61,7 @@ class EfficientExperiment(pl.LightningModule):
         self.model.detect_image(img_path)
         return {'val_loss': avg_loss, 'log': tensorboard_logs}
 
- 
     def configure_optimizers(self):
-
         optims = []
         scheds = []
         optimizer = optim.AdamW(self.model.parameters(),
@@ -72,31 +70,24 @@ class EfficientExperiment(pl.LightningModule):
         # Check if more than 1 optimizer is required (Used for adversarial training)
         try:
             if self.params['LR_2'] is not None:
-                optimizer2 = optim.AdamW(getattr(self.model,self.params['submodel']).parameters(),
-                                        lr=self.params['LR_2'])
+                optimizer2 = optim.AdamW(getattr(self.model,self.params['submodel']).parameters(), lr=self.params['LR_2'])
                 optims.append(optimizer2)
         except:
             pass
-
         try:
             if self.params['scheduler_gamma'] is not None:
-                scheduler = optim.lr_scheduler.ExponentialLR(optims[0],
-                                                             gamma = self.params['scheduler_gamma'])
+                scheduler = optim.lr_scheduler.ExponentialLR(optims[0], gamma = self.params['scheduler_gamma'])
                 scheds.append(scheduler)
-
                 # Check if another scheduler is required for the second optimizer
                 try:
                     if self.params['scheduler_gamma_2'] is not None:
-                        scheduler2 = optim.lr_scheduler.ExponentialLR(optims[1],
-                                                                      gamma = self.params['scheduler_gamma_2'])
+                        scheduler2 = optim.lr_scheduler.ExponentialLR(optims[1],gamma = self.params['scheduler_gamma_2'])
                         scheds.append(scheduler2)
                 except:
                     pass
                 return optims, scheds
         except:
             return optims
-
-
 
     @data_loader
     def train_dataloader(self):
@@ -110,7 +101,6 @@ class EfficientExperiment(pl.LightningModule):
             'drop_last': True,
             'collate_fn': collater,
             'num_workers': self.params['num_workers']}
-
         return DataLoader(dataset, **training_params)
 
     @data_loader
@@ -126,18 +116,15 @@ class EfficientExperiment(pl.LightningModule):
             'collate_fn': collater,
             'num_workers': self.params['num_workers']}
         self.sample_dataloader = DataLoader(self.sample_dataloader, **val_params)
-
         return self.sample_dataloader
 
     
-
 class VAEXperiment(pl.LightningModule):
 
     def __init__(self,
                  vae_model: BaseVAE,
                  params: dict) -> None:
         super(VAEXperiment, self).__init__()
-
         self.model = vae_model
         self.params = params
         self.curr_device = None
@@ -182,7 +169,6 @@ class VAEXperiment(pl.LightningModule):
                           f"recons_{self.logger.name}_{self.current_epoch}.png",
                           normalize=True,
                           nrow=12)
-
         # vutils.save_image(test_input.data,
         #                   f"{self.logger.save_dir}{self.logger.name}/version_{self.logger.version}/"
         #                   f"real_img_{self.logger.name}_{self.current_epoch}.png",
@@ -190,49 +176,32 @@ class VAEXperiment(pl.LightningModule):
         #                   nrow=12)
 
         try:
-            samples = self.model.sample(144,
-                                        self.curr_device,
-                                        labels = test_label)
-            vutils.save_image(samples.cpu().data,
-                              f"{self.logger.save_dir}{self.logger.name}/version_{self.logger.version}/"
-                              f"{self.logger.name}_{self.current_epoch}.png",
-                              normalize=True,
-                              nrow=12)
+            samples = self.model.sample(144, self.curr_device, labels = test_label)
+            vutils.save_image(samples.cpu().data, f"{self.logger.save_dir}{self.logger.name}/version_{self.logger.version}/" f"{self.logger.name}_{self.current_epoch}.png", normalize=True, nrow=12)
         except:
             pass
-
-
         del test_input, recons #, samples
 
-
     def configure_optimizers(self):
-
         optims = []
         scheds = []
-        optimizer = optim.Adam(self.model.parameters(),
-                               lr=self.params['LR'],
-                               weight_decay=self.params['weight_decay'])
+        optimizer = optim.Adam(self.model.parameters(), lr=self.params['LR'], weight_decay=self.params['weight_decay'])
         optims.append(optimizer)
         # Check if more than 1 optimizer is required (Used for adversarial training)
         try:
             if self.params['LR_2'] is not None:
-                optimizer2 = optim.Adam(getattr(self.model,self.params['submodel']).parameters(),
-                                        lr=self.params['LR_2'])
+                optimizer2 = optim.Adam(getattr(self.model,self.params['submodel']).parameters(), lr=self.params['LR_2'])
                 optims.append(optimizer2)
         except:
             pass
-
         try:
             if self.params['scheduler_gamma'] is not None:
-                scheduler = optim.lr_scheduler.ExponentialLR(optims[0],
-                                                             gamma = self.params['scheduler_gamma'])
+                scheduler = optim.lr_scheduler.ExponentialLR(optims[0], gamma = self.params['scheduler_gamma'])
                 scheds.append(scheduler)
-
                 # Check if another scheduler is required for the second optimizer
                 try:
                     if self.params['scheduler_gamma_2'] is not None:
-                        scheduler2 = optim.lr_scheduler.ExponentialLR(optims[1],
-                                                                      gamma = self.params['scheduler_gamma_2'])
+                        scheduler2 = optim.lr_scheduler.ExponentialLR(optims[1], gamma = self.params['scheduler_gamma_2'])
                         scheds.append(scheduler2)
                 except:
                     pass
@@ -274,8 +243,8 @@ class VAEXperiment(pl.LightningModule):
             transforms.ToTensor(),
             # torchvision.transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
         ])
-
         return transform
+
 
 class UnetExperiment(pl.LightningModule):
 
@@ -283,7 +252,6 @@ class UnetExperiment(pl.LightningModule):
                 model: BaseUnet,
                 params: dict) -> None:
         super(UnetExperiment, self).__init__()
-
         self.model = model
         self.params = params
         self.curr_device = None
@@ -315,38 +283,31 @@ class UnetExperiment(pl.LightningModule):
     def validation_end(self, outputs):
         avg_loss = torch.stack([x['loss'] for x in outputs]).mean()
         tensorboard_logs = {'avg_val_loss': avg_loss}
-        # self.model.detect_image(img_path)
         self.segment_image(seg_img_path)
         return {'val_loss': avg_loss, 'log': tensorboard_logs}
 
- 
     def configure_optimizers(self):
-
         optims = []
         scheds = []
         optimizer = optim.Adam(self.model.parameters(),
-                               lr=self.params['LR'])
+                               lr=self.params['LR'],
+                               weight_decay=self.params['weight_decay'])
         optims.append(optimizer)
         # Check if more than 1 optimizer is required (Used for adversarial training)
         try:
             if self.params['LR_2'] is not None:
-                optimizer2 = optim.Adam(getattr(self.model,self.params['submodel']).parameters(),
-                                        lr=self.params['LR_2'])
+                optimizer2 = optim.Adam(getattr(self.model,self.params['submodel']).parameters(), lr=self.params['LR_2'])
                 optims.append(optimizer2)
         except:
             pass
-
         try:
             if self.params['scheduler_gamma'] is not None:
-                scheduler = optim.lr_scheduler.ExponentialLR(optims[0],
-                                                             gamma = self.params['scheduler_gamma'])
+                scheduler = optim.lr_scheduler.ExponentialLR(optims[0], gamma = self.params['scheduler_gamma'])
                 scheds.append(scheduler)
-
                 # Check if another scheduler is required for the second optimizer
                 try:
                     if self.params['scheduler_gamma_2'] is not None:
-                        scheduler2 = optim.lr_scheduler.ExponentialLR(optims[1],
-                                                                      gamma = self.params['scheduler_gamma_2'])
+                        scheduler2 = optim.lr_scheduler.ExponentialLR(optims[1], gamma = self.params['scheduler_gamma_2'])
                         scheds.append(scheduler2)
                 except:
                     pass
@@ -362,7 +323,7 @@ class UnetExperiment(pl.LightningModule):
             ])
         image = Image.open(image_path)
         input_tensor = data_transform(image)
-        pred_tb = self.model(input_tensor.unsqueeze(0).to(self.curr_device))
+        pred_tb = self.model(input_tensor.unsqueeze(0).to(self.curr_device)).cpu()
         pred_tb = F.sigmoid(pred_tb)
         pred_tb = pred_tb.detach().numpy()
         mask = pred_tb[0].transpose(1,2,0)
@@ -373,32 +334,17 @@ class UnetExperiment(pl.LightningModule):
         image = image.resize((self.params['imH'],self.params['imW']),Image.ANTIALIAS)
         image = np.asarray(image)
         masked_img = image * mask
-        plt.imsave(f"{self.logger.save_dir}{self.logger.name}/version_{self.logger.version}/"
-                          f"masked_{self.logger.name}_{self.current_epoch}.png", masked_img)
-
-
-
-
-
+        plt.imsave(f"{self.logger.save_dir}{self.logger.name}/version_{self.logger.version}/"f"masked_{self.logger.name}_{self.current_epoch}.png", masked_img)
 
     @data_loader
     def train_dataloader(self):
-       
-        dataset = VAE_Dataset_folder(self.params['train_data_path'], self.params['train_ann_path'])
-            # raise ValueError('Undefined dataset type')
+        dataset = Unet_Dataset_folder(self.params['train_data_path'], self.params['train_ann_path'])
         self.num_train_imgs = len(dataset)
-        return DataLoader(dataset,
-                          batch_size= self.params['batch_size'], num_workers=self.params['num_workers'],
-                          shuffle = True,
-                          drop_last=True)
+        return DataLoader(dataset, batch_size= self.params['batch_size'], num_workers=self.params['num_workers'], shuffle = True, drop_last=True)
 
     @data_loader
     def val_dataloader(self):
-        
-        self.sample_dataloader = VAE_Dataset_folder(self.params['test_data_path'], self.params['test_ann_path'])
+        self.sample_dataloader = Unet_Dataset_folder(self.params['test_data_path'], self.params['test_ann_path'])
         self.num_val_imgs = len(self.sample_dataloader)
-        self.sample_dataloader = DataLoader(self.sample_dataloader, batch_size= self.params['batch_size'],
-                                            shuffle = False, num_workers=self.params['num_workers'],
-                                            drop_last=True)
-
+        self.sample_dataloader = DataLoader(self.sample_dataloader, batch_size= self.params['batch_size'], shuffle = False, num_workers=self.params['num_workers'], drop_last=True)
         return self.sample_dataloader

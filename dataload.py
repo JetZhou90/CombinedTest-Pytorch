@@ -135,6 +135,49 @@ class Detect_Dataset_folder(Dataset):
         return annotations
 
 
+class Unet_Dataset_folder(Dataset):
+    """Class for getting individual transformations and data
+    Args:
+        images_dir = path of input images
+        labels_dir = path of labeled images
+        imH = Image Height (default:128) 
+        imW = Image Width  (default:128) 
+        transformI = Input Images transformation (default: None)
+    Output:
+        img    = Transformed images
+        la_img = Transformed labels"""
+
+    def __init__(self, images_dir, labels_dir, imH=128, imW=128, transformI = None):
+        self.images_dir = images_dir
+        self.images = sorted(os.listdir(self.images_dir))
+        self.labels_dir = labels_dir
+        self.labels = sorted(os.listdir(self.labels_dir))
+        self.transformI = transformI
+        self.imH = imH
+        self.imW = imW
+        if self.transformI:
+            self.tx = self.transformI
+        else:
+            self.tx = transforms.Compose([
+                transforms.Resize((self.imH,self.imW)),
+                transforms.RandomRotation((-10,10)),
+                transforms.RandomHorizontalFlip(),
+                transforms.ToTensor()
+            ])
+
+    def __len__(self):
+        return len(self.images)
+
+    def __getitem__(self, i):
+        i1        = Image.open(os.path.join(self.images_dir , self.images[i])) 
+        label_img = Image.open(os.path.join(self.labels_dir , self.labels[i]))
+        seed=np.random.randint(0,100) # make a seed with numpy generator 
+        # apply this seed to img tranfsorms
+        random.seed(seed) 
+        torch.manual_seed(seed)
+        img = self.tx(i1)
+        la_img = self.tx(label_img)
+        return img, la_img
 
 
 class VAE_Dataset_folder(Dataset):
@@ -142,11 +185,12 @@ class VAE_Dataset_folder(Dataset):
     Args:
         images_dir = path of input images
         labels_dir = path of labeled images
+        imH = Image Height (default:128) 
+        imW = Image Width  (default:128) 
         transformI = Input Images transformation (default: None)
-        transformM = Input Labels transformation (default: None)
     Output:
-        tx = Transformed images
-        lx = Transformed labels"""
+        img    = Transformed images
+        la_img = Transformed labels"""
 
     def __init__(self, images_dir, labels_dir=None, imH=128, imW=128, transformI = None):
         self.images_dir = images_dir
@@ -164,10 +208,10 @@ class VAE_Dataset_folder(Dataset):
         else:
             self.tx = transforms.Compose([
                 transforms.Resize((self.imH,self.imW)),
-                # torchvision.transforms.CenterCrop(96),
-                # torchvision.transforms.RandomRotation((-10,10)),
-               # torchvision.transforms.RandomHorizontalFlip(),
-                # torchvision.transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4),
+                transforms.RandomRotation((-10,10)),
+                # transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4)
+                # transforms.CenterCrop(96),
+                # transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
                 # torchvision.transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
             ])
@@ -188,3 +232,6 @@ class VAE_Dataset_folder(Dataset):
         img = self.tx(i1)
         la_img = self.tx(label_img)
         return img, la_img
+
+
+        
