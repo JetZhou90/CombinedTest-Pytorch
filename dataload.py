@@ -4,7 +4,7 @@ import numpy as np
 from torchvision import transforms
 from torch.utils.data import Dataset, DataLoader
 import xml.etree.ElementTree as ET
-
+import json
 
 class Resizer(object):
     """Convert ndarrays in sample to Tensors."""
@@ -62,6 +62,7 @@ class Detect_Dataset_folder(Dataset):
         self.images = sorted(os.listdir(img_dir))
         self.ann    = sorted(os.listdir(ann_dir))
         self.images_dir = img_dir
+        self.obj_list = ['circle', 'ellipseh', 'ellipsev','ellipsevinv', 'rectangle', 'rectanglev', 'square', 'squareinv']
         self.ann_dir = ann_dir
         if transform is not None:
             self.transform = transform
@@ -91,23 +92,37 @@ class Detect_Dataset_folder(Dataset):
     def load_annotations(self, image_index):
         # get ground truth annotations
         path = os.path.join(self.ann_dir , self.ann[image_index])
-        tree = ET.parse(path)
         annotations = np.zeros((0, 5))
-        for elem in tree.iter():
-            for attr in list(elem):
+        if path.split('.')[-1] == 'xml':
+            tree = ET.parse(path)
+            for elem in tree.iter():
+                for attr in list(elem):
+                    annotation = np.zeros((1, 5))
+                    if 'name' in attr.tag:
+                        annotation[0, 4] = 0 if attr.text =='icon' else 1
+                    if 'bndbox' in attr.tag:
+                        for dim in list(attr):
+                            if 'xmin' in dim.tag:
+                                annotation[0,0] =  int(round(float(dim.text)))
+                            if 'ymin' in dim.tag:
+                                annotation[0,1] = int(round(float(dim.text)))
+                            if 'xmax' in dim.tag:
+                                annotation[0,2] = int(round(float(dim.text)))
+                            if 'ymax' in dim.tag:
+                                annotation[0,3] = int(round(float(dim.text)))
+                    annotations = np.append(annotations, annotation, axis=0)
+        else:
+            with open(path, 'rb') as f:
+                jsonfile = json.load(f)
+            label_list = jsonfile['labels']
+            for i , (xmin,ymin,xmax,ymax) in enumerate(jsonfile['locations']):
                 annotation = np.zeros((1, 5))
-                if 'name' in attr.tag:
-                    annotation[0, 4] = 0 if attr.text =='icon' else 1
-                if 'bndbox' in attr.tag:
-                    for dim in list(attr):
-                        if 'xmin' in dim.tag:
-                            annotation[0,0] =  int(round(float(dim.text)))
-                        if 'ymin' in dim.tag:
-                            annotation[0,1] = int(round(float(dim.text)))
-                        if 'xmax' in dim.tag:
-                            annotation[0,2] = int(round(float(dim.text)))
-                        if 'ymax' in dim.tag:
-                            annotation[0,3] = int(round(float(dim.text)))
+                annotation[0, 4] = self.obj_list.index(label_list[i])
+                # print(annotation[0,:-1].shape)
+                annotation[0,0] = xmin
+                annotation[0,1] = ymin
+                annotation[0,2] = xmax
+                annotation[0,3] = ymax
                 annotations = np.append(annotations, annotation, axis=0)
         return annotations
 

@@ -20,7 +20,6 @@ from losses import threshold_predictions_p
 img_path = 'test/wps002.png'
 seg_img_path = 'test/american_bulldog_56.jpg'
 
-
 class EfficientExperiment(pl.LightningModule):
 
     def __init__(self, 
