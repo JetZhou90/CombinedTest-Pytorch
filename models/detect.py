@@ -82,13 +82,12 @@ class EfficientDetBackbone(nn.Module):
         loss = cls_loss + reg_loss
         return {'loss':loss, 'cls_loss':cls_loss, 'reg_loss':reg_loss}
 
-    def detect_image(self, image_path, use_cuda=False, use_float16=False):
+    def detect_image(self, image_path, save_path, line_thickness=None, use_cuda=False, use_float16=False,threshold = 0.2, iou_threshold = 0.2):
         # replace this part with your project's anchor config
         max_size = self.input_sizes[self.compound_coef]
         anchor_ratios = [(1.0, 1.0), (1.4, 0.7), (0.7, 1.4)]
         anchor_scales = [2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0)]
-        threshold = 0.2
-        iou_threshold = 0.2
+       
         ori_imgs, framed_imgs, framed_metas = preprocess(image_path, max_size=max_size)
         if use_cuda:
             x = torch.stack([torch.from_numpy(fi).cuda() for fi in framed_imgs], 0)
@@ -100,9 +99,9 @@ class EfficientDetBackbone(nn.Module):
         clipBoxes = ClipBoxes()
         out = postprocess(x, anchors, regression, classification, regressBoxes, clipBoxes, threshold, iou_threshold)
         out = invert_affine(framed_metas, out)
-        self.__save_image(out, ori_imgs, imwrite=True)
+        self.__save_image(out, ori_imgs, save_path, line_thickness=line_thickness,imwrite=True)
 
-    def __save_image(self, preds, imgs, imwrite=True):
+    def __save_image(self, preds, imgs, save_path, line_thickness=None, imwrite=True):
         color_list = standard_to_bgr(STANDARD_COLORS)
         for i in range(len(imgs)):
             if len(preds[i]['rois']) == 0:
@@ -112,6 +111,6 @@ class EfficientDetBackbone(nn.Module):
                 x1, y1, x2, y2 = preds[i]['rois'][j].astype(np.int)
                 obj = self.obj_list[preds[i]['class_ids'][j]]
                 score = float(preds[i]['scores'][j])
-                plot_one_box(imgs[i], [x1, y1, x2, y2], label=obj,score=score,color=color_list[get_index_label(obj, self.obj_list)])
+                plot_one_box(imgs[i], [x1, y1, x2, y2], label=obj,score=score, line_thickness=line_thickness,color=color_list[get_index_label(obj, self.obj_list)])
             if imwrite:
-                cv2.imwrite(f'test/img_inferred_d{self.compound_coef}_this_repo_{i}.jpg', imgs[i])
+                cv2.imwrite(save_path, imgs[i][..., ::-1])
