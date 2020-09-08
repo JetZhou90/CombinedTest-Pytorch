@@ -43,11 +43,17 @@ def combine_seal(seals_list,label_list,back,roi_list,num_seals,save_name):
          
 def process_combine(img,back,xmin,ymin,xmax,ymax):
     h,w = img.shape[:2]
-    img2gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-    ret,mask = cv2.threshold(img2gray,200,255,cv2.THRESH_BINARY)
+    bk = back[ymin:ymax,xmin:xmax]
+    bk2gray = cv2.cvtColor(bk,cv2.COLOR_BGR2GRAY)
+    ret,mask = cv2.threshold(bk2gray,100,255,cv2.THRESH_BINARY)
     mask_inv = cv2.bitwise_not(mask)
-    new_area = back[ymin:ymax,xmin:xmax]
-    img_bg = cv2.bitwise_and(new_area,new_area,mask=mask)
-    mask_img = cv2.bitwise_and(img,img,mask = mask_inv)
-    dst = cv2.add(img_bg,mask_img)
+    mask_bk = cv2.bitwise_and(bk,bk,mask=mask_inv)
+    org_img = cv2.bitwise_and(img,img,mask = mask)
+    dst = cv2.add(org_img,mask_bk)
+    img2gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+    ret,mask = cv2.threshold(img2gray,230,255,cv2.THRESH_BINARY)
+    mask_inv = cv2.bitwise_not(mask)
+    mask_img = cv2.bitwise_and(dst,dst,mask = mask_inv)
+    img_bk = cv2.bitwise_and(bk,bk,mask = mask)
+    dst = cv2.add(img_bk,mask_img)
     return dst

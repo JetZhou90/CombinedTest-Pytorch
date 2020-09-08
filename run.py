@@ -42,7 +42,7 @@ if __name__ == "__main__":
     if experiment_type == 0:
         model = DetectModel(num_classes=config['model_params']['num_classes'], 
                         compound_coef=config['model_params']['compound_coef'], 
-                        obj_list=config['model_params']['obj_list'], 
+                        obj_list=config['exp_params']['obj_list'], 
                         ratios=eval(config['model_params']['anchors_ratios']), 
                         scales=eval(config['model_params']['anchors_scales']))
         experiment = EfficientExperiment(model, config['exp_params'])    
@@ -55,5 +55,6 @@ if __name__ == "__main__":
     else:
         raise 'Unknow Type number -- Choose the model type- 0-detect model, 1-segment model, 3-generative model'   
     runner = Trainer(default_save_path=f"{tt_logger.save_dir}", min_nb_epochs=1, logger=tt_logger, log_save_interval=100, train_percent_check=1., val_percent_check=1., num_sanity_val_steps=5, early_stop_callback = False, **config['trainer_params'])
+    #runner = Trainer(resume_from_checkpoint='./logs/EfficientNet/version_2/checkpoints/_ckpt_epoch_236.ckpt',min_nb_epochs=1, logger=tt_logger, log_save_interval=100, train_percent_check=1., val_percent_check=1., num_sanity_val_steps=5, early_stop_callback = False, **config['trainer_params'])
     print(f"======= Training {config['model_params']['name']} =======")
     runner.fit(experiment)

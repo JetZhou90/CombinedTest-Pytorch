@@ -90,7 +90,7 @@ class EfficientExperiment(pl.LightningModule):
 
     @data_loader
     def train_dataloader(self):
-        dataset = Detect_Dataset_folder(img_dir=self.params['train_data_path'],ann_dir=self.params['train_ann_path'],
+        dataset = Detect_Dataset_folder(img_dir=self.params['train_data_path'],ann_dir=self.params['train_ann_path'], obj_list=self.params['obj_list'],
         transform=transforms.Compose([Normalizer(mean=self.params['mean'], std=self.params['std']), Augmenter(),Resizer(self.params['input_size'])]))
             # raise ValueError('Undefined dataset type')
         self.num_train_imgs = len(dataset)
@@ -104,7 +104,7 @@ class EfficientExperiment(pl.LightningModule):
 
     @data_loader
     def val_dataloader(self):
-        self.sample_dataloader =Detect_Dataset_folder(img_dir=self.params['train_data_path'],ann_dir=self.params['train_ann_path'],
+        self.sample_dataloader =Detect_Dataset_folder(img_dir=self.params['train_data_path'],ann_dir=self.params['train_ann_path'], obj_list=self.params['obj_list'],
         transform=transforms.Compose([Normalizer(mean=self.params['mean'], std=self.params['std']), Augmenter(),Resizer(self.params['input_size'])]))
             # raise ValueError('Undefined dataset type')
         self.num_val_imgs = len(self.sample_dataloader)

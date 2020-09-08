@@ -58,11 +58,11 @@ class Normalizer(object):
 
 
 class Detect_Dataset_folder(Dataset):
-    def __init__(self, img_dir, ann_dir, input_size=512, transform=None):
+    def __init__(self, img_dir, ann_dir, obj_list, input_size=512, transform=None):
         self.images = sorted(os.listdir(img_dir))
         self.ann    = sorted(os.listdir(ann_dir))
         self.images_dir = img_dir
-        self.obj_list = ['circle', 'ellipseh', 'ellipsev','ellipsevinv', 'rectangle', 'rectanglev', 'square', 'squareinv']
+        self.obj_list = obj_list
         self.ann_dir = ann_dir
         if transform is not None:
             self.transform = transform
