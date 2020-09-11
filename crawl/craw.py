@@ -1,0 +1,90 @@
+import requests
+import pdb, os
+from tqdm import tqdm
+import time
+import random , json, base64
+
+def ensure_dir(director):
+    if not os.path.exists(director):
+        os.makedirs(director)
+
+# url = "http://www.baidu.com"
+# url = "http://zxgk.court.gov.cn/zhzxgk/"
+# url = "http://zxgk.court.gov.cn/zhzxgk/captcha.do?captchaId=9876fedeb1e14be699810a67e469cde4&random=0.3675069892982034"
+url = "https://examapi.sac.net.cn/pages/login/captcha?"
+times = 2000
+save_folder = "result_sac"
+ensure_dir(save_folder)
+headers = {
+    'Connection': 'Keep-Alive',
+    'Accept': 'text/html, application/xhtml+xml, */*',
+    'Accept-Language': 'en-US,en;q=0.8,zh-Hans-CN;q=0.5,zh-Hans;q=0.3',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 6.3; WOW64; Trident/7.0; rv:11.0) like Gecko'
+    }
+ 
+
+def dyn_craw(url, xpath ='//*[@id="validateImage"]'):
+    from selenium import webdriver
+    driver = webdriver.PhantomJS(executable_path='C:/Users/hongji/Desktop/projects/crawl/phantomjs-2.1.1-windows/bin/phantomjs.exe')
+    driver.get(url)
+    driver.implicitly_wait(20)
+    elements=driver.find_element_by_xpath(xpath)
+    ssion = requests.session()
+    for times_i in tqdm(range(times)):
+        img_name = './%s/%d_jet.png' %(save_folder, times_i)
+        url = elements.get_attribute('src')
+        res = ssion.get(url, headers=headers,stream=True, verify=False )
+        res.encoding='utf-8'
+        file = open(img_name,'wb') 
+        file.write(res.content)  
+        file.close()
+        elements.click()
+
+
+def task(times_i=-1):
+    img_name = './%s/%d_jet.png' %(save_folder, times_i)
+    if os.path.exists(img_name):
+        return "Pass"
+    id_num = random.random()
+    ssion = requests.session()
+    # html = ssion.get(url, headers=headers)
+    # html.encoding='utf-8'
+    # soup = BeautifulSoup(html.text, 'html.parser')
+    # all_imgs = soup.find_all("img")
+
+
+    # if len(all_imgs):
+    # if times_i != -1:
+        # img_url = all_imgs[-1]["src"]
+    img_url = url + str(id_num) 
+    res = ssion.get(url+img_url, stream=True, headers=headers, verify=False)
+    res.encoding='utf-8'
+    image = json.loads(res.text).get('image')[22::]
+    image = base64.b64decode(image) 
+    # if len(t.content) > 1e4 or len(t.content)<4e3:
+    #     print("Fail")
+    #     return "Fail"
+    if times_i != -1:
+        with open(img_name, 'wb') as f:
+                f.write(image)
+    # return "Done"
+    # else:
+    #     print("failed")
+    #     return "Fail"
+while True:
+    for times_i in tqdm(range(times)):
+        flag = task(times_i=times_i)
+        if flag == "Fail":
+            break
+        elif flag == "Done":
+            time.sleep(1)
+        # pdb.set_trace()
+        # t.encoding='utf-8'
+        # soup=BeautifulSoup(t.text,'html.parser')
+        # image_name = url.split('/')[-1]
+        # with open('./img/%s' % image_name, 'wb') as f:
+        # for chunk in r.iter_content(chunk_size=128):
+        #     f.write(chunk)
+        #     print('Saved %s' % image_name)
+    time.sleep(10)
+    # pdb.set_trace()
