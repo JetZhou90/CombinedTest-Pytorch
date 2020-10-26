@@ -1,0 +1,27 @@
+model_params:
+  name: 'deeplabv3_resnet101'
+  num_class: 1
+
+exp_params:
+  dataset: seal
+  train_data_path: 'data/unet/train/images/'
+  train_ann_path:  'data/unet/train/annotations/'
+  test_data_path: 'data/unet/test/images/'
+  test_ann_path: 'data/unet/test/annotations/'
+  batch_size: 4 # Better to have a square number
+  LR: 0.0001
+  weight_decay: 0.0
+  scheduler_gamma: 0.95
+  num_workers: 4
+  imH: 128
+  imW: 128
+
+trainer_params:
+  gpus: 0
+  max_nb_epochs: 15
+  max_epochs: 5
+
+logging_params:
+  save_dir: "logs/"
+  name: "deeplabv3_resnet101"
+  manual_seed: 1265
