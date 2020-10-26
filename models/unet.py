@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import torch.utils.data
 import torch
 from losses import calc_loss, dice_loss, threshold_predictions_v,threshold_predictions_p
+from torchvision.models import segmentation 
 
 class conv_block(nn.Module):
     """
@@ -41,6 +42,23 @@ class up_conv(nn.Module):
     def forward(self, x):
         x = self.up(x)
         return x
+
+
+class Deeplabv3_Resnet101(nn.Module):
+    def __init__(self, num_classes=1):
+        super(Deeplabv3_Resnet101, self).__init__()
+        self.model = segmentation.deeplabv3_resnet101(num_classes=num_classes)
+    
+    def forward(self,x):
+        pre = self.model(x)
+        return pre['out']
+    
+    def loss_function(self, y_pre, y, **kwargs) -> dict:
+        lossT = calc_loss(y_pre, y) 
+        return {'loss':lossT} 
+
+
+
 
 
 class U_Net(nn.Module):
@@ -468,7 +486,7 @@ class NestedUNet(nn.Module):
     Implementation of this paper:
     https://arxiv.org/pdf/1807.10165.pdf
     """
-    def __init__(self, in_ch=3, out_ch=1):
+    def __init__(self, in_ch=3, out_ch=1,**kwargs):
         super(NestedUNet, self).__init__()
 
         n1 = 64

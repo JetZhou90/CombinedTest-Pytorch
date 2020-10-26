@@ -113,7 +113,6 @@ class ConCVAE(BaseVAE):
         """
         result = self.encoder(input)
         # result = torch.flatten(result, start_dim=1)
-
         # Split the result into mu and var components
         # of the latent Gaussian distribution
         mu = self.fc_mu(result)
