@@ -3,7 +3,7 @@ from .ccvae import ConCVAE
 from .cvae import ConditionalVAE
 from .detect import EfficientDetBackbone
 from .unet import Unet_dict, NestedUNet, U_Net, R2U_Net, AttU_Net, R2AttU_Net, Deeplabv3_Resnet101
-
+from .jetnet import JetNet
 
 
 DetectModel = EfficientDetBackbone
@@ -17,6 +17,7 @@ unet_models = {
 
 vae_models = {
     'ConditionalVAE':ConditionalVAE,
-    'ConCVAE':ConCVAE
+    'ConCVAE':ConCVAE,
+    'jetNet':JetNet
 }
 
