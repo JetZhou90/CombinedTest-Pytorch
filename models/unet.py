@@ -43,7 +43,6 @@ class up_conv(nn.Module):
         x = self.up(x)
         return x
 
-
 class Deeplabv3_Resnet101(nn.Module):
     def __init__(self, num_classes=1):
         super(Deeplabv3_Resnet101, self).__init__()

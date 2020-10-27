@@ -114,3 +114,12 @@ class JetNet(nn.Module):
         class_loss = F.(class_y, true_y)
         loss = recons_loss + kld_weight * kld_loss + class_loss
         return {'loss': loss, 'Reconstruction_Loss':recons_loss, 'KLD':-kld_loss, 'class_cross_entropy':class_loss}
+
+    def generate(self, x: Tensor, **kwargs) -> Tensor:
+        """
+        Given an input image x, returns the reconstructed image
+        :param x: (Tensor) [B x C x H x W]
+        :return: (Tensor) [B x C x H x W]
+        """
+
+        return self.forward(x, **kwargs)[0]
