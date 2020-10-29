@@ -88,14 +88,13 @@ if __name__ == "__main__":
     seal_condition = Image.open(condition_path)
     seal_condition = np.array(seal_condition)
     seal_condition = seal_condition[...,:3]
-    seal_condition = padding(seal_condition,(600,600))
     h,w,c = seal_condition.shape
+    val = max(h,w)
     seal_img = masked_image(img_path, mask_path)
-    resized_seal_img = padding(seal_img,(600,600))
-    rect_list = capture_pix_area(seal_img,use_blur=True)[1]
-    for box in rect_list:
-        xmin,ymin,xmax,ymax = box
-        seal_image = seal_img[ymin:ymax,xmin:xmax]
+    h,w,c = seal_img.shape
+    val = max(val,h,w)
+    resized_seal_img = padding(seal_img,(val,val))
+    seal_condition = padding(seal_condition,(val,val))
     # resized_seal_img = cv2.resize(seal_image,(w,h))
     trans_img = Transfrom_img(seal_condition,resized_seal_img,min_mathch_count=3)
     # resized_seal_img = cv2.resize(trans_img,(w,h))
