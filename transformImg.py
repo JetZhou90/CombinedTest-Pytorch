@@ -66,22 +66,41 @@ def Transfrom_img(seal_condition,resized_seal_img,min_mathch_count=10, flann_ind
         return None
     return transformed_candidate
 
+def padding(image, target_size):
+    if image.shape[-1]==3:
+        h, w, c = image.shape
+    else:
+        h, w = image.shape[0],image.shape[1]
+        c =1
+    t_h, t_w = target_size
+    if min(t_h, t_w) < max(h, w):
+        print('Please change target size, it must be larger than both w and h')
+        return image
+    h_val = (t_h - h ) // 2
+    w_val = (t_w - w ) // 2
+    new_img = cv2.copyMakeBorder(image, h_val,t_h - h-h_val,w_val,t_w - w-w_val,cv2.BORDER_REPLICATE)
+    return new_img
+
 if __name__ == "__main__":
-    img_path = 'data/unet/train/images/new_10-11_05.png'
-    mask_path = 'data/unet/train/annotations/new_10-11_05.jpg'
-    condition_path = '../cmb_seal/square_2.png'
+    img_path = 'data/unet/train/images/new_10-11_801.png'
+    mask_path = 'data/unet/train/annotations/new_10-11_801.jpg'
+    condition_path = '../cmb_seal/rhombus.png'
     seal_condition = Image.open(condition_path)
     seal_condition = np.array(seal_condition)
     seal_condition = seal_condition[...,:3]
+    seal_condition = padding(seal_condition,(600,600))
     h,w,c = seal_condition.shape
     seal_img = masked_image(img_path, mask_path)
+    resized_seal_img = padding(seal_img,(600,600))
     rect_list = capture_pix_area(seal_img,use_blur=True)[1]
     for box in rect_list:
         xmin,ymin,xmax,ymax = box
         seal_image = seal_img[ymin:ymax,xmin:xmax]
-    resized_seal_img = cv2.resize(seal_image,(w,h))
-    trans_img = Transfrom_img(seal_condition,resized_seal_img)
+    # resized_seal_img = cv2.resize(seal_image,(w,h))
+    trans_img = Transfrom_img(seal_condition,resized_seal_img,min_mathch_count=3)
+    # resized_seal_img = cv2.resize(trans_img,(w,h))
     if trans_img is None:
+        image_show(np.hstack([resized_seal_img,seal_condition]))
         print('Not Match')
     else:
         image_show(np.hstack([resized_seal_img,trans_img,seal_condition]))
