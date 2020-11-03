@@ -139,7 +139,7 @@ class Unet_Dataset_folder(Dataset):
         img    = Transformed images
         la_img = Transformed labels"""
 
-    def __init__(self, images_dir, labels_dir, imH=128, imW=128, transformI = None):
+    def __init__(self, images_dir, labels_dir, one_hot=True, num_class=4, imH=128, imW=128, transformI = None, transformL= None):
         self.images_dir = images_dir
         self.images = sorted(os.listdir(self.images_dir))
         self.labels_dir = labels_dir
@@ -152,10 +152,32 @@ class Unet_Dataset_folder(Dataset):
         else:
             self.tx = transforms.Compose([
                 transforms.Resize((self.imH,self.imW)),
-                transforms.RandomRotation((-10,10)),
-                transforms.RandomHorizontalFlip(),
+                # transforms.RandomRotation((-10,10)),
+                # transforms.RandomHorizontalFlip(),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5])
+
+            ])
+        if self.transformL:
+            self.tl = self.transformL
+        else:
+            self.tl = transforms.Compose([
+                transforms.Resize((self.imH,self.imW)),
+                # transforms.RandomRotation((-10,10)),
+                # transforms.RandomHorizontalFlip(),
                 transforms.ToTensor()
             ])
+        
+        self.one_hot = one_hot
+        self.num_class = num_class
+        
+    def get_one_hot(self, label, N):
+        size = list(label.size())
+        label = label.view(-1)   # reshape 为向量
+        ones = torch.sparse.torch.eye(N)
+        ones = ones.index_select(0, label)   # 用上面的办法转为换one hot
+        size.append(N)  # 把类别输目添到size的尾后，准备reshape回原来的尺寸
+        return ones.view(*size)
 
     def __len__(self):
         return len(self.images)
@@ -168,7 +190,17 @@ class Unet_Dataset_folder(Dataset):
         random.seed(seed) 
         torch.manual_seed(seed)
         img = self.tx(i1)
-        la_img = self.tx(label_img)
+        # la_img = self.tl(label_img)
+        if self.one_hot:
+            tl = transforms.Compose([
+                transforms.Resize((self.imH,self.imW))])
+            resize_label_img = tl(label_img)
+            label_img_data = np.array(resize_label_img)
+            label_img_tensor = torch.LongTensor(label_img_data)
+            label_img_one_hot = get_one_hot(label_img_tensor, self.num_class)
+            la_img = label_img_one_hot.permute(2,1,0)
+        else:
+            la_img = self.tl(label_img)
         return img, la_img
 
 
