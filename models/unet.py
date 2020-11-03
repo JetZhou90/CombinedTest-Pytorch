@@ -56,7 +56,18 @@ class Deeplabv3_Resnet101(nn.Module):
         lossT = calc_loss(y_pre, y) 
         return {'loss':lossT} 
 
-
+class Deeplabv3_Resnet50(nn.Module):
+    def __init__(self, num_classes=1):
+        super(Deeplabv3_Resnet50, self).__init__()
+        self.model = segmentation.deeplabv3_resnet50(num_classes=num_classes)
+    
+    def forward(self,x):
+        pre = self.model(x)
+        return pre['out']
+    
+    def loss_function(self, y_pre, y, **kwargs) -> dict:
+        lossT = calc_loss(y_pre, y) 
+        return {'loss':lossT} 
 
 
 
@@ -485,7 +496,7 @@ class NestedUNet(nn.Module):
     Implementation of this paper:
     https://arxiv.org/pdf/1807.10165.pdf
     """
-    def __init__(self, in_ch=3, out_ch=1,**kwargs):
+    def __init__(self, in_ch=3, out_ch=4,**kwargs):
         super(NestedUNet, self).__init__()
 
         n1 = 64

@@ -5,32 +5,38 @@ from torch.nn import functional as F
 from .types_ import *
 from torchvision import models
 
-
 class JetNet(nn.Module):
-    
-    def __init__(self, latent_dim=128, in_channels = 3, image_size=128, **kwargs):
+    def __init__(self, latent_dim=128, in_channels = 3, image_size=128, num_class=3, backbone='mobilenet_v2',**kwargs):
         super(JetNet, self).__init__()
         self.latent_dim = latent_dim
         self.image_size = image_size
         self.embeding_layer = nn.Conv2d(in_channels=in_channels*2,out_channels= in_channels, kernel_size=1)
-        self.embeding_class = nn.Conv2d(in_channels=in_channels,out_channels= self.latent_dim//2, kernel_size=1,stride=32)
-        self.feature_layer = models.mobilenet_v2().features
+        self.backbone = backbone
+        if self.backbone == 'mobilenet_v2':
+            # mobile_net_v2_features
+            self.feature_layer = models.mobilenet_v2(pretrained=True).features
+        else:
+            # deeplab_v3_backbone
+            self.feature_layer = models.segmentation.deeplabv3_resnet101(pretrained=True).backbone
+        self.filters = 1280 if self.backbone == 'mobilenet_v2' else 2048
+        self.div = 32 if self.backbone == 'mobilenet_v2' else 8 
+        self.embeding_class = nn.Conv2d(in_channels=in_channels,out_channels= self.latent_dim//2, kernel_size=1,stride=self.div)
+        self.new_image_size = int(self.image_size / self.div)+1 if self.image_size / self.div > int(self.image_size / self.div) else int(self.image_size / self.div)
         self.classfier = nn.Sequential(
-            nn.Linear(in_features=1280*4*4, out_features=512),
+            nn.Linear(in_features=self.filters*self.new_image_size*self.new_image_size, out_features=512),
             nn.ReLU6(),
             nn.Linear(512, 128),
             nn.ReLU6(),
-            nn.Linear(128, 16),
+            nn.Linear(128, 32),
             nn.ReLU6(),
-            nn.Linear(16,3),
+            nn.Linear(32,num_class),
             nn.Softmax()
         )
-        self.mu = nn.Sequential(nn.Conv2d(1280, out_channels= self.latent_dim//2, kernel_size= 3, padding  = 1),
+        self.mu = nn.Sequential(nn.Conv2d(self.filters, out_channels= self.latent_dim//2, kernel_size= 3, padding  = 1),
                                 nn.BatchNorm2d(self.latent_dim//2))
-        self.var = nn.Sequential(nn.Conv2d(1280, out_channels= self.latent_dim//2,kernel_size= 3, padding= 1),
+        self.var = nn.Sequential(nn.Conv2d(self.filters, out_channels= self.latent_dim//2,kernel_size= 3, padding= 1),
                                  nn.BatchNorm2d(self.latent_dim//2),nn.Softplus())
-        
-        hidden_dims = [512, 256, 128, 64 ]
+        hidden_dims = [512, 256, 128, 64, ] if self.backbone == 'mobilenet_v2' else [256, 64,]
         self.decoder_input = nn.ConvTranspose2d(self.latent_dim, hidden_dims[0], kernel_size=3, padding=1)
         modules = []
         in_channels = hidden_dims[0]
@@ -62,7 +68,10 @@ class JetNet(nn.Module):
                             nn.Tanh())
         
     def encode(self, input: Tensor) -> List[Tensor]:
-        result = self.feature_layer(input)
+        if self.backbone == 'mobilenet_v2':
+            result = self.feature_layer(input)
+        else:
+            result = self.feature_layer(input)['out']
         mu = self.mu(result)
         log_var = self.var(result) + 1e-8
         return [mu, log_var]
@@ -73,26 +82,27 @@ class JetNet(nn.Module):
         result = self.final_layer(result)
         return result
     
-    
     def reparameterize(self, mu: Tensor, logvar: Tensor) -> Tensor:
-        """
-        Will a single z be enough ti compute the expectation
-        for the loss??
-        :param mu: (Tensor) Mean of the latent Gaussian
-        :param logvar: (Tensor) Standard deviation of the latent Gaussian
-        :return:
-        """
         std = torch.exp(0.5 * logvar)
-        eps = torch.randn_like(std)
+        eps = torch.randn_like(std) 
         return eps * std + mu
     
+    def match_class(self, input:Tensor, condition:Tensor) -> Tensor:
+        if self.backbone == 'mobilenet_v2':
+            feature_i = self.feature_layer(input)
+            feature_c = self.feature_layer(condition)
+        else:
+            feature_i = self.feature_layer(input)['out']
+            feature_c = self.feature_layer(condition)['out']
+        diff = abs(feature_c-feature_i)
+        diff = diff.view(-1,self.filters*self.new_image_size*self.new_image_size)
+        class_label = self.classfier(diff)
+        return class_label
+
     def forward(self, input: Tensor, **kwargs) -> List[Tensor]:
         condition = kwargs['labels']
         concat_x = torch.cat([input, condition], dim=1)
-        diff = abs(input - condition)
-        feature = self.feature_layer(diff)
-        feature = feature.view(-1,1280*16)
-        class_label = self.classfier(feature)
+        class_label = self.match_class(input,condition)
         embedded_input = self.embeding_layer(concat_x)
         mu, log_var = self.encode(embedded_input)
         z = self.reparameterize(mu, log_var)
@@ -111,15 +121,6 @@ class JetNet(nn.Module):
         kld_weight = kwargs['M_N']  # Account for the minibatch samples from the dataset
         recons_loss =F.mse_loss(recons, input)
         kld_loss = torch.mean(-0.5 * torch.sum(1 + log_var - mu ** 2 - log_var.exp()))
-        class_loss = F.(class_y, true_y)
+        class_loss = F.cross_entropy(class_y, true_y)
         loss = recons_loss + kld_weight * kld_loss + class_loss
         return {'loss': loss, 'Reconstruction_Loss':recons_loss, 'KLD':-kld_loss, 'class_cross_entropy':class_loss}
-
-    def generate(self, x: Tensor, **kwargs) -> Tensor:
-        """
-        Given an input image x, returns the reconstructed image
-        :param x: (Tensor) [B x C x H x W]
-        :return: (Tensor) [B x C x H x W]
-        """
-
-        return self.forward(x, **kwargs)[0]

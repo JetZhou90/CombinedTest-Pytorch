@@ -82,13 +82,11 @@ class EfficientDetBackbone(nn.Module):
         loss = cls_loss + reg_loss
         return {'loss':loss, 'cls_loss':cls_loss, 'reg_loss':reg_loss}
 
-    def detect_image(self, image_path, use_cuda=False, use_float16=False):
+    def detect_image(self, image_path, use_cuda=False, use_float16=False,threshold = 0.2,iou_threshold = 0.2):
         # replace this part with your project's anchor config
         max_size = self.input_sizes[self.compound_coef]
         anchor_ratios = [(1.0, 1.0), (1.4, 0.7), (0.7, 1.4)]
         anchor_scales = [2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0)]
-        threshold = 0.2
-        iou_threshold = 0.2
         ori_imgs, framed_imgs, framed_metas = preprocess(image_path, max_size=max_size)
         if use_cuda:
             x = torch.stack([torch.from_numpy(fi).cuda() for fi in framed_imgs], 0)
