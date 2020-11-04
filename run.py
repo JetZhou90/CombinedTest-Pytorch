@@ -53,7 +53,7 @@ if __name__ == "__main__":
         model = vae_models[config['model_params']['name']](**config['model_params'])
         experiment = VAEXperiment(experiment = UnetExperiment(model, config['exp_params']))
     else:
-        raise 'Unknow Type number -- Choose the model type- 0-detect model, 1-segment model, 3-generative model'   
+        raise 'Unknow Type number -- Choose the model type- 0-detect model, 1-segment model, 2-generative model'   
     runner = Trainer(default_save_path=f"{tt_logger.save_dir}", min_nb_epochs=1, logger=tt_logger, log_save_interval=100, train_percent_check=1., val_percent_check=1., num_sanity_val_steps=5, early_stop_callback = False, **config['trainer_params'])
     #runner = Trainer(resume_from_checkpoint='./logs/EfficientNet/version_2/checkpoints/_ckpt_epoch_236.ckpt',min_nb_epochs=1, logger=tt_logger, log_save_interval=100, train_percent_check=1., val_percent_check=1., num_sanity_val_steps=5, early_stop_callback = False, **config['trainer_params'])
     print(f"======= Training {config['model_params']['name']} =======")
