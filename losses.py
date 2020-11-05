@@ -110,7 +110,8 @@ def calc_loss(prediction, target, bce_weight=0.5):
         bce_weight = 0.5 (default)
     Output:
         loss : dice loss of the epoch """
-    prediction = F.softmax(prediction)
+    # prediction = F.softmax(prediction)
+    prediction = F.sigmoid(prediction)
     bce = F.binary_cross_entropy(prediction, target)
     
     dice = dice_loss(prediction, target)

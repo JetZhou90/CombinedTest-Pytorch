@@ -7,7 +7,7 @@ from experiment import VAEXperiment, EfficientExperiment, UnetExperiment
 import torch.backends.cudnn as cudnn
 from pytorch_lightning import Trainer
 from pytorch_lightning.logging import TestTubeLogger
-from pytorch_lightning.callbacks import ModelCheckpoint
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Generic runner for seal-validation system models')
@@ -18,9 +18,9 @@ if __name__ == "__main__":
                         default='configs/unet.yaml')
     parser.add_argument('--type', '-t',
                         dest="model_type",
-                        help =  'choose the model type- 0-detect model, 1-segment model, 3-generative model',
+                        help =  'choose the model type- 0-detect model, 1-segment model, 2-generative model',
                         type= int,
-                        default=0)
+                        default=1)
     args = parser.parse_args()
     with open(args.filename, 'r') as file:
         try:

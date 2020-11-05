@@ -59,7 +59,7 @@ def capture_pix_area(image, kernel_size=3,kernel_size2=11,area_thresh=.1, bias=0
         rect_list.append(box)
     return image, rect_list
 
-def transfrom_img(seal_condition,resized_seal_img,min_mathch_count=10, flann_index_kdtree=1,trees=5,checks=50):
+def transfrom_img(seal_condition,resized_seal_img,min_mathch_count=10, flann_index_kdtree=1,trees=5,checks=50, thresh=0.35):
     sift = cv2.SIFT_create()
     gray_condition= cv2.cvtColor(seal_condition,cv2.COLOR_BGR2GRAY)
     gray_seal = cv2.cvtColor(resized_seal_img,cv2.COLOR_BGR2GRAY)
@@ -71,7 +71,7 @@ def transfrom_img(seal_condition,resized_seal_img,min_mathch_count=10, flann_ind
     matches = flann.knnMatch(psd_des1, psd_des2, k=2)
     goodMatch = []
     for m, n in matches:
-        if m.distance < 0.35*n.distance:
+        if m.distance < thresh * n.distance:
             goodMatch.append(m)
     if len(goodMatch)> min_mathch_count:
         # 获取关键点的坐标

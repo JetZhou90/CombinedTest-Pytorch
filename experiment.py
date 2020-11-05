@@ -282,7 +282,7 @@ class UnetExperiment(pl.LightningModule):
     def validation_end(self, outputs):
         avg_loss = torch.stack([x['loss'] for x in outputs]).mean()
         tensorboard_logs = {'avg_val_loss': avg_loss}
-        self.segment_image(seg_img_path)
+        # self.segment_image(seg_img_path)
         return {'val_loss': avg_loss, 'log': tensorboard_logs}
 
     def configure_optimizers(self):
