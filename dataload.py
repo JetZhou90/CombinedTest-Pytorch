@@ -139,32 +139,27 @@ class Unet_Dataset_folder(Dataset):
         img    = Transformed images
         la_img = Transformed labels"""
 
-    def __init__(self, images_dir, labels_dir, one_hot=True, num_class=4, imH=128, imW=128, transformI = None, transformL= None):
+    def __init__(self, images_dir, labels_dir, one_hot=False, num_class=4, imH=128, imW=128, transformI = None, transformL= None):
         self.images_dir = images_dir
         self.images = sorted(os.listdir(self.images_dir))
         self.labels_dir = labels_dir
         self.labels = sorted(os.listdir(self.labels_dir))
-        self.transformI = transformI
         self.imH = imH
         self.imW = imW
-        if self.transformI:
-            self.tx = self.transformI
+        if transformI:
+            self.tx = transformI
         else:
             self.tx = transforms.Compose([
                 transforms.Resize((self.imH,self.imW)),
-                # transforms.RandomRotation((-10,10)),
-                # transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
                 transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5])
 
             ])
-        if self.transformL:
-            self.tl = self.transformL
+        if transformL:
+            self.tl = transformL
         else:
             self.tl = transforms.Compose([
                 transforms.Resize((self.imH,self.imW)),
-                # transforms.RandomRotation((-10,10)),
-                # transforms.RandomHorizontalFlip(),
                 transforms.ToTensor()
             ])
         
